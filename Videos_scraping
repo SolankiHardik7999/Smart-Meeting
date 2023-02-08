@@ -1,0 +1,47 @@
+import pandas as pd
+import numpy as np
+from googleapiclient.discovery import build
+from youtube_transcript_api import YouTubeTranscriptApi
+
+
+
+
+api_key = "AIzaSyC63fOdRdvvxk7m4k4LGONElKinXIvh29s"
+
+#1.query API 
+
+rq = build("youtube", "v3", developerKey=api_key).playlistItems().list(
+        part="contentDetails, snippet",
+        playlistId="PL-XeOa5hMEYxprJm93wFRM49E5V0ffsfY",
+        maxResults=39,        
+        ).execute()
+        
+#2.Create a list with video Ids and Titles
+
+vid_ids = []
+vid_title = []
+for item in rq["items"]:
+    vid_ids.append(item["contentDetails"]["videoId"])
+    vid_title.append(item["snippet"]["title"])
+
+#3.Get transcripts
+
+srt = YouTubeTranscriptApi.get_transcripts(vid_ids)
+
+#4.For each video id extract the Key:"text" from a list of dictionaries 
+
+get_key_text = [" ".join([a_dict["text"] for a_dict in srt[0][i]]) for i in vid_ids]      
+
+#5.Create a dictionary with the title and transcript for each video id
+
+pl_dict = dict(zip(vid_title,get_key_text))
+
+
+
+
+dataset = pd.DataFrame(pl_dict,index=[0]).T
+data = dataset.reset_index()
+data.rename(columns = {'index':'Title',0:'Transcript'},inplace=True)
+data
+
+data.to_csv('cognitive_statistics.csv')
